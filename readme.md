@@ -23,6 +23,7 @@ This separation is better than a single-step process because it allows each AI a
 -   🧑‍💻 **Human-in-the-Loop Design**: Content generation and publishing are separated, giving you full control to review, edit, and approve content before it goes live.
  
 <img src="images/results.png" alt="Final Result: a 12 posts thread with each post reply to the previous post" width="600">
+Final Result: a 12 posts thread with each post reply to the previous post
 
 ## 📚 Table of Contents
 
