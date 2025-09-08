@@ -79,6 +79,9 @@ You need to create an Airtable base to store the tweet data.
 | `media_ids` | Single line text   | Comma-separated list of media IDs (future use).              |
 | `x_id`      | Single line text   | The ID of the tweet after it has been posted to X (Twitter). |
 
+!Airtable Base Setup
+*The required fields and their types in your Airtable table.*
+
 ### 2. Import & Configure in n8n
 
 1.  **Import Workflow**: In your n8n canvas, select **Import from File** and upload the `academic paper to twitter threads.json` file.
@@ -97,8 +100,8 @@ You need to create an Airtable base to store the tweet data.
 2.  Open its **Test URL**.
 3.  In the form, paste the URL of the academic paper PDF into the `pdfUrl` field and submit.
 
-    !Generate Content Form
-    *The form used to kick off the content generation process.*
+!Generate Content Form
+*The form used to kick off the content generation process.*
 
 4.  The workflow will run the generation phase. You can check your Airtable base to see the newly created rows for each tweet.
 
@@ -108,8 +111,8 @@ You need to create an Airtable base to store the tweet data.
 2.  Open its **Test URL**.
 3.  In the form, enter the exact title of the document as it appears in the `doc_title` column in Airtable and submit.
 
-    !Publish Thread Form
-    *The form used to publish a pre-generated thread.*
+!Publish Thread Form
+*The form used to publish a pre-generated thread.*
 
 4.  The workflow will begin publishing the tweets one by one, updating each row with the corresponding `x_id` after it's posted.
 
