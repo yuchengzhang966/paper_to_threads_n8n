@@ -22,7 +22,7 @@ This separation is better than a single-step process because it allows each AI a
 -   🛡️ **Fault-Tolerant Publishing**: The workflow is designed to be resilient. If publishing stops in the middle (e.g., due to an API rate limit), you can fix the issue and restart the job without creating duplicate posts. It picks up right where it left off.
 -   🧑‍💻 **Human-in-the-Loop Design**: Content generation and publishing are separated, giving you full control to review, edit, and approve content before it goes live.
  
-![Final Result: a 12 posts thread with each post reply to the previous post](images/results.png)
+<img src="images/results.png" alt="Final Result: a 12 posts thread with each post reply to the previous post" width="600">
 
 ## 📚 Table of Contents
 
