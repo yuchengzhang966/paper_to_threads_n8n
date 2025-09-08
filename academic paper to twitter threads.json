@@ -1,0 +1,1349 @@
+{
+  "name": "My workflow 4",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "if the documents are already stored, then proceed to x posting step;\nif not, then store in airtable\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1856,
+        -544
+      ],
+      "typeVersion": 1,
+      "id": "8b6a2a30-5c86-4196-a4de-8a4223c5acad",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b203e095-1f83-4a22-a590-95d1904fb8a1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1168,
+        -64
+      ],
+      "id": "75440a8e-46e9-4bc3-b83f-cbff0c1cbdbb",
+      "name": "check if already stored"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "645a3380-584d-4acd-b4d1-50e0371ae2eb",
+              "leftValue": "={{ $('Loop Over Items1').item.json.tweet_pos }}",
+              "rightValue": "1",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        784
+      ],
+      "id": "56636e51-4576-42fc-b57f-0f1808117947",
+      "name": "Check if it is the first one(first-> true)"
+    },
+    {
+      "parameters": {
+        "text": "={{ $('Loop Over Items1').item.json.text }}",
+        "additionalFields": {
+          "inReplyToStatusId": {
+            "__rl": true,
+            "value": "={{ $('Last tweet').item.json.x_id }}",
+            "mode": "id"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        896
+      ],
+      "id": "5c2caab5-35a8-4559-bbeb-189b7421454d",
+      "name": "Create Tweet2",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YfUZDa91WpCSATpo",
+          "name": "learningcurve"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3520,
+        880
+      ],
+      "id": "56340c84-f24b-4d3d-a960-7660ff0a94a9",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "=You are an AI expert who is proficient at turning academic paper into engaging material. Your frist step is to read a research paper and understand it. You only output json file.\n\nExtract the essential ideas of this PDF, list arguments, supporting arguments, facts, and data that support the arguments, screenshots that are needed to be taken in order to support the arguments, (list the page number, and position) List any highlights or quotes that are likely to generate the largest interest from the reader for future reference.\nTask: Read the PDF at {{ $json.pdfUrl }} page.\n- title\n- main arguments (id, text, supporting points, related screenshot ids)\n- screenshots (id, page, anchor.text, position, bounding_box if possible)\n- highlights\n\n",
+        "documentUrls": "={{ $json.pdfUrl }}",
+        "options": {
+          "maxOutputTokens": 40000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        64
+      ],
+      "id": "57c7ba43-f041-4d7c-aab8-dcb601674d9c",
+      "name": "Read the document",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rj8K2xdgLWJo31KX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an expert social copywriter. \nONLY output a single valid JSON object. No prose, explanations, or code fences.\nTarget platform: X (Twitter). Each tweet ≤ 275 chars (leave buffer under 280).\nTone: clear, punchy, Intuitive, use examples when necessary.  Any twenty-year-old without a college degree can understand.  Each paragraph is separated by an empty line. \n\nUse clickbait for the first post. \n\nIf some fields are missing, infer sensibly; never hallucinate facts.\n",
+              "role": "model"
+            },
+            {
+              "content": "=Task\nGiven the analysis JSON for a document (either a single object or an array with one object), compose one or more X threads that present the key arguments with evidence and optional screenshots.\n\nInput JSON (analysis):\n{{ JSON.stringify($json, null, 2) }}\n\nOutput format (JSON only):\n{\n  \"threads\": [\n    {\n      \"position\": 1,\n      \"title\": \"string\",               // reuse input title or synthesize short title\n      \"tweets\": [\n        {\n          \"position\": 1,\n          \"text\": \"string (≤275 chars, no numbering here)\",\n          \"mediaScreenshotIds\": [\"S1\",\"S2\"] // optional, map from related_screenshot_ids when relevant\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"thread_count\": 1,                 // integer\n    \"max_tweets_per_thread\": 12,       // integer\n    \"notes\": \"\"                        // optional operational notes, empty string if none\n  }\n}\n\nRules\n- Create a high-impact HOOK as tweet 1 of each thread (clear, curiosity-driven, no hype).\n- Then 3–8 tweets summarizing **main_arguments**; for each argument:\n  - 1 tweet = the claim in plain English.\n  - If a strong supporting point exists, append a short parenthetical (e.g., \"(45% YoY)\").\n  - If `related_screenshot_ids` are present, map up to 4 ids into `mediaScreenshotIds`.\n- Add 1–2 tweets with **highlights** (quotes/statistics) as punchy closers.\n- End with a concise CTA tweet (e.g., \"Follow for more concise breakdowns\") only if it fits ≤275 chars.\n- Keep each tweet standalone (no dangling references). Avoid jargon and acronyms unless explained.\n\nThread splitting policy\n- If there are >6 main arguments, split into multiple threads (2–5 arguments per thread).\n- Numbering is handled downstream; DO NOT add \"(1/N)\" in text.\n\nContent constraints\n- Do NOT invent data. Use only the provided analysis JSON fields:\n  - title\n  - main_arguments[].text, .supporting_points (take strongest one if concise), .related_screenshot_ids\n  - highlights[]\n  - screenshots[] (ids only for media mapping)\n- If input is an array, use the first element.\n\nValidation\n- Ensure strictly valid JSON (UTF-8), no Markdown fences.\n- Every thread and tweet must have a positive integer `position` starting at 1 and strictly increasing.\n- Every `mediaScreenshotIds[]` item must exist in `screenshots[].id` if screenshots are provided; otherwise return an empty array.\n\nReturn ONLY the JSON object as specified—no extra text.\n"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        64
+      ],
+      "id": "df847981-681f-47d0-ae6b-267f2d1754f7",
+      "name": "Generate the X posts",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rj8K2xdgLWJo31KX",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "filterByFormula": "={{ \"AND({doc_title} = '\" + $json.doc_title + \"', {tweet_pos} = \" + ( $json.tweet_pos ) + \")\" }}\n",
+        "returnAll": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1792,
+        592
+      ],
+      "id": "a98aba03-82c8-4163-9713-2370bd2a2c37",
+      "name": "Check if already published",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "08b16b2e-05e3-4702-b3f4-993be1ae5a0d",
+              "leftValue": "={{ $json.x_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        592
+      ],
+      "id": "ed0dbd50-a7e5-4772-9737-9f5932b09127",
+      "name": "Check if published ( yes -> already published)"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "filterByFormula": "={{ \"AND({doc_title} = '\" + $json.doc_title + \"', {tweet_pos} = \" + ( $json.tweet_pos - 1 ) + \")\" }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2608,
+        896
+      ],
+      "id": "6d6868a2-97dd-42c3-aa0e-d6a3705492ee",
+      "name": "Last tweet",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "what is the pdf",
+        "formDescription": "give me the pdf",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "title"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        528
+      ],
+      "id": "8cf170ab-038a-49ec-b181-bc7adab26e37",
+      "name": "On form submission1",
+      "webhookId": "f2846e33-5b13-40d3-a1c9-0136ccca450a"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "filterByFormula": "={{ \"{doc_title} = '\" + $json.title + \"'\" }}",
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "thread_pos"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        528
+      ],
+      "id": "44e3c072-5139-41f1-a18f-80c4de7ddee9",
+      "name": "Search records1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "what is the pdf",
+        "formDescription": "give me the pdf",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "upload here",
+              "fieldType": "file",
+              "acceptFileTypes": "pdf"
+            },
+            {
+              "fieldLabel": "pdfUrl",
+              "placeholder": "pdfUrl"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        704,
+        -80
+      ],
+      "id": "5dea5f72-121f-4910-a54f-20f1e557effd",
+      "name": "On form submission2",
+      "webhookId": "d264286c-50d7-42c3-a42a-18f260f0e66a"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Robust: extract the first JSON object/array from arbitrary text\n\nfunction getRawText(input) {\n  // Try common fields; fall back to stringifying the whole input\n  const candidates = [input.text, input.output, input.data, input.body, input];\n  for (const c of candidates) {\n    if (typeof c === \"string\" && c.trim()) return c;\n  }\n  return \"\";\n}\n\nfunction stripFences(s) {\n  s = s.trim().replace(/^\\uFEFF/, \"\"); // BOM\n  // Remove a single fenced block if present: ```json ... ```\n  if (s.startsWith(\"```\")) {\n    // keep only inside the first fenced block if there are multiple\n    const m = s.match(/^```[a-zA-Z]*\\s*([\\s\\S]*?)\\s*```/);\n    if (m) return m[1].trim();\n  }\n  return s;\n}\n\n// Extract the first balanced {...} or [...] JSON substring, ignoring braces in strings\nfunction extractFirstJson(text) {\n  const s = stripFences(String(text));\n  const startIdx = (() => {\n    const o = s.indexOf(\"{\");\n    const a = s.indexOf(\"[\");\n    if (o === -1 && a === -1) return -1;\n    if (o === -1) return a;\n    if (a === -1) return o;\n    return Math.min(o, a);\n  })();\n  if (startIdx === -1) return null;\n\n  let i = startIdx;\n  let depthObj = 0; // counts { }\n  let depthArr = 0; // counts [ ]\n  let inStr = false;\n  let esc = false;\n\n  for (; i < s.length; i++) {\n    const ch = s[i];\n\n    if (inStr) {\n      if (esc) {\n        esc = false;\n      } else if (ch === \"\\\\\") {\n        esc = true;\n      } else if (ch === \"\\\"\") {\n        inStr = false;\n      }\n      continue;\n    }\n\n    if (ch === \"\\\"\") {\n      inStr = true;\n      continue;\n    }\n    if (ch === \"{\") depthObj++;\n    else if (ch === \"}\") depthObj--;\n    else if (ch === \"[\") depthArr++;\n    else if (ch === \"]\") depthArr--;\n\n    // When both depths return to zero, we closed the outermost JSON\n    if (i > startIdx && depthObj === 0 && depthArr === 0) {\n      const jsonSlice = s.slice(startIdx, i + 1).trim();\n      return jsonSlice;\n    }\n  }\n  return null; // not balanced\n}\n\nlet raw = getRawText($input.first().json.content.parts[0].text);\nif (!raw) throw new Error(\"No text found to parse.\");\n\nlet jsonText = stripFences(raw);\nlet parsed;\n\n// First, try direct parse (in case it’s pure JSON)\ntry {\n  parsed = JSON.parse(jsonText);\n} catch {\n  // If that fails, try extracting the first JSON block from the text\n  const block = extractFirstJson(jsonText);\n  if (!block) {\n    throw new Error(\n      \"Could not find a valid JSON block in the text. Preview: \" +\n      String(jsonText).slice(0, 200)\n    );\n  }\n  try {\n    parsed = JSON.parse(block);\n  } catch (e2) {\n    throw new Error(\"Found a JSON-looking block but failed to parse it: \" + e2.message +\n      \"\\nBlock preview: \" + block.slice(0, 300));\n  }\n}\n\n// If the model returned a top-level array but you expect an object later,\n// you can keep it as-is. n8n Code node supports returning any JSON.\nreturn { json: parsed };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        64
+      ],
+      "id": "362ccb00-d203-434d-8b00-ecaf13c7ab42",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "tweet_key",
+            "doc_title",
+            "thread_pos",
+            "tweet_pos",
+            "text",
+            "media_ids"
+          ],
+          "schema": [
+            {
+              "id": "tweet_key",
+              "displayName": "tweet_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "doc_title",
+              "displayName": "doc_title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "thread_pos",
+              "displayName": "thread_pos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "tweet_pos",
+              "displayName": "tweet_pos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "media_ids",
+              "displayName": "media_ids",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "x_id",
+              "displayName": "x_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2528,
+        64
+      ],
+      "id": "d394519b-6f99-4bae-9d0e-a0b1d2e041fc",
+      "name": "Create a record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1552,
+        464
+      ],
+      "id": "39e439b7-d24f-42ef-b229-e12191e00601",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// $json is the object with { title, threads: [...] }\nconst docTitle = $input.first().json.threads[0].title || \"Untitled\";\nconst runId = Date.now(); // uniqueness if you want it\nconst out = [];\n\nfor (const thread of ($input.first().json.threads || [])) {\n  const tPos = Number(thread.position || 1);\n  for (const tw of (thread.tweets || [])) {\n    const tweetPos = Number(tw.position || 1);\n    out.push({\n      json: {\n        tweet_key: `${docTitle}::${runId}::${tPos}::${tweetPos}`,\n        doc_title: docTitle,\n        thread_pos: tPos,\n        tweet_pos: tweetPos,\n        text: tw.text || \"\",\n        media_ids: (tw.mediaScreenshotIds || []).join(\",\")\n      }\n    });\n  }\n}\nreturn out; // multiple items → Airtable will create multiple rows\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        80
+      ],
+      "id": "8dc713ea-e9fc-4ec5-825b-75e32dd5da1a",
+      "name": "Flatten for airtable1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Robust: extract the first JSON object/array from arbitrary text\n\nfunction getRawText(input) {\n  // Try common fields; fall back to stringifying the whole input\n  const candidates = [input.text, input.output, input.data, input.body, input];\n  for (const c of candidates) {\n    if (typeof c === \"string\" && c.trim()) return c;\n  }\n  return \"\";\n}\n\nfunction stripFences(s) {\n  s = s.trim().replace(/^\\uFEFF/, \"\"); // BOM\n  // Remove a single fenced block if present: ```json ... ```\n  if (s.startsWith(\"```\")) {\n    // keep only inside the first fenced block if there are multiple\n    const m = s.match(/^```[a-zA-Z]*\\s*([\\s\\S]*?)\\s*```/);\n    if (m) return m[1].trim();\n  }\n  return s;\n}\n\n// Extract the first balanced {...} or [...] JSON substring, ignoring braces in strings\nfunction extractFirstJson(text) {\n  const s = stripFences(String(text));\n  const startIdx = (() => {\n    const o = s.indexOf(\"{\");\n    const a = s.indexOf(\"[\");\n    if (o === -1 && a === -1) return -1;\n    if (o === -1) return a;\n    if (a === -1) return o;\n    return Math.min(o, a);\n  })();\n  if (startIdx === -1) return null;\n\n  let i = startIdx;\n  let depthObj = 0; // counts { }\n  let depthArr = 0; // counts [ ]\n  let inStr = false;\n  let esc = false;\n\n  for (; i < s.length; i++) {\n    const ch = s[i];\n\n    if (inStr) {\n      if (esc) {\n        esc = false;\n      } else if (ch === \"\\\\\") {\n        esc = true;\n      } else if (ch === \"\\\"\") {\n        inStr = false;\n      }\n      continue;\n    }\n\n    if (ch === \"\\\"\") {\n      inStr = true;\n      continue;\n    }\n    if (ch === \"{\") depthObj++;\n    else if (ch === \"}\") depthObj--;\n    else if (ch === \"[\") depthArr++;\n    else if (ch === \"]\") depthArr--;\n\n    // When both depths return to zero, we closed the outermost JSON\n    if (i > startIdx && depthObj === 0 && depthArr === 0) {\n      const jsonSlice = s.slice(startIdx, i + 1).trim();\n      return jsonSlice;\n    }\n  }\n  return null; // not balanced\n}\n\nlet raw = getRawText($input.first().json.content.parts[0].text);\nif (!raw) throw new Error(\"No text found to parse.\");\n\nlet jsonText = stripFences(raw);\nlet parsed;\n\n// First, try direct parse (in case it’s pure JSON)\ntry {\n  parsed = JSON.parse(jsonText);\n} catch {\n  // If that fails, try extracting the first JSON block from the text\n  const block = extractFirstJson(jsonText);\n  if (!block) {\n    throw new Error(\n      \"Could not find a valid JSON block in the text. Preview: \" +\n      String(jsonText).slice(0, 200)\n    );\n  }\n  try {\n    parsed = JSON.parse(block);\n  } catch (e2) {\n    throw new Error(\"Found a JSON-looking block but failed to parse it: \" + e2.message +\n      \"\\nBlock preview: \" + block.slice(0, 300));\n  }\n}\n\n// If the model returned a top-level array but you expect an object later,\n// you can keep it as-is. n8n Code node supports returning any JSON.\nreturn { json: parsed };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        64
+      ],
+      "id": "2975b731-9210-4d98-a960-d3b42e67b6a2",
+      "name": "turn into JSON data1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "filterByFormula": "={{ $json.fields.doc_title }}",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        -80
+      ],
+      "id": "7698058c-2f1d-4614-bfd4-3c3b01424665",
+      "name": "Search records2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "if the documents are already stored, then proceed to x posting step;\nif not, then store in airtable\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2016,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "cba7008b-c1ee-468a-9bad-9569bf3a296c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        -176
+      ],
+      "id": "2a110ca8-a879-40b7-a488-7bf89488731b",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        2608,
+        656
+      ],
+      "id": "dcc00131-bbff-4c56-be6a-7e918760bf67",
+      "name": "Create the first time posts",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YfUZDa91WpCSATpo",
+          "name": "learningcurve"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tweet_key": "={{ $('Check if already published').item.json.tweet_key }}",
+            "x_id": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "tweet_key"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "tweet_key",
+              "displayName": "tweet_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "doc_title",
+              "displayName": "doc_title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "thread_pos",
+              "displayName": "thread_pos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "tweet_pos",
+              "displayName": "tweet_pos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "media_ids",
+              "displayName": "media_ids",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "x_id",
+              "displayName": "x_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2832,
+        656
+      ],
+      "id": "475b04fc-23e0-4ee2-8b14-e1ce7e1eee0e",
+      "name": "Store x_id",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appkPcnMke7y4KqtV",
+          "mode": "list",
+          "cachedResultName": "x account",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnQz9qNd7oPcW9g",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appkPcnMke7y4KqtV/tblnQz9qNd7oPcW9g"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tweet_key": "={{ $('Loop Over Items1').item.json.tweet_key }}",
+            "x_id": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "tweet_key"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "tweet_key",
+              "displayName": "tweet_key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "doc_title",
+              "displayName": "doc_title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "thread_pos",
+              "displayName": "thread_pos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "tweet_pos",
+              "displayName": "tweet_pos",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "media_ids",
+              "displayName": "media_ids",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "x_id",
+              "displayName": "x_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3008,
+        896
+      ],
+      "id": "770b37b3-75ae-41f2-9c7a-15f24de58876",
+      "name": "Store X_id",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q0XrGZpbqVOfRtOs",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 600
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3296,
+        784
+      ],
+      "id": "369fd58e-8a4d-4714-8ed0-2e31ca5bbb7f",
+      "name": "Wait",
+      "webhookId": "bc492b37-e893-4de8-ac64-20f0d2455e45"
+    }
+  ],
+  "pinData": {
+    "On form submission2": [
+      {
+        "json": {
+          "upload here": null,
+          "pdfUrl": "https://cdn.openai.com/pdf/d04913be-3f6f-4d2b-b283-ff432ef4aaa5/why-language-models-hallucinate.pdf",
+          "submittedAt": "2025-09-07T16:05:10.318-07:00",
+          "formMode": "test"
+        }
+      }
+    ],
+    "Flatten for airtable1": [
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::1",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 1,
+          "text": "Ever wonder why Language Models sometimes confidently invent facts? New research reveals it's less about AI's 'imagination' and more about how we train and evaluate them. A deep dive into the roots of hallucination. #LLMs #AI",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::2",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 2,
+          "text": "First, LMs hallucinate because current training & evaluation systems reward guessing over admitting uncertainty. Their core pretraining objectives often push models to 'fill in the blanks' even when uncertain. #LLMHallucinations",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::3",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 3,
+          "text": "Post-training evaluations, relying heavily on binary correct/incorrect scoring, penalize 'I don't know' responses. This makes guessing the optimal strategy for higher scores, perpetuating errors. (See Table 1 for examples of LM guessing.)",
+          "media_ids": "S1"
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::4",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 4,
+          "text": "Second, hallucinations aren't mysterious. They emerge as natural statistical errors in pre-trained LMs, similar to misclassifications. Models learn language distribution, and even perfect data can yield errors. #AIErrors",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::5",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 5,
+          "text": "This is formalized: generative error rate (hallucinations) is tied to the misclassification rate of an 'Is-It-Valid' binary classification. Errors stem from statistical complexity or poor models. (Fig 1 illustrates this.)",
+          "media_ids": "S2"
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::6",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 6,
+          "text": "Why do hallucinations persist post-training? Misaligned evaluation metrics. Most benchmarks use binary 0-1 scoring: correct gets 1 point, incorrect or 'I don't know' get 0. This actively discourages uncertainty. #EvaluationBias",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::7",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 7,
+          "text": "Under this binary grading, abstaining (saying 'IDK') is strictly suboptimal. Making an overconfident 'best guess' is the optimal strategy for maximizing scores, even if wrong. Many popular benchmarks follow this pattern. (See Table 2 for details.)",
+          "media_ids": "S3"
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::8",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 8,
+          "text": "So, how to fix it? Don't just add more hallucination evaluations. Modify *mainstream* evaluations to explicitly reward expressing uncertainty. The current system drowns out good intentions. #ResponsibleAI",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::9",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 9,
+          "text": "A proposed solution: include explicit confidence targets in instructions. Penalize mistakes, but allow 'I don't know' without maximum penalty. This 'behavioral calibration' incentivizes models to answer only when confident.",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::10",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 10,
+          "text": "In essence, most current LM evaluations are not aligned. They impose a false right-wrong dichotomy, giving no credit for expressing uncertainty or requesting clarification. This needs to change.",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::11",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 11,
+          "text": "The core takeaway: Hallucinations are largely a 'socio-technical problem.' We reward models for guessing, so they guess. Rewarding calibration could be the key to more reliable AI. #AIethics",
+          "media_ids": ""
+        }
+      },
+      {
+        "json": {
+          "tweet_key": "Why Language Models Hallucinate::1757288749354::1::12",
+          "doc_title": "Why Language Models Hallucinate",
+          "thread_pos": 1,
+          "tweet_pos": 12,
+          "text": "Follow for more concise breakdowns of complex AI topics!",
+          "media_ids": ""
+        }
+      }
+    ],
+    "On form submission1": [
+      {
+        "json": {
+          "title": "Why Language Models Hallucinate",
+          "submittedAt": "2025-09-07T21:31:14.398-07:00",
+          "formMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "check if already stored": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read the document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if it is the first one(first-> true)": {
+      "main": [
+        [
+          {
+            "node": "Create the first time posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Last tweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Tweet2": {
+      "main": [
+        [
+          {
+            "node": "Store X_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the document": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate the X posts": {
+      "main": [
+        [
+          {
+            "node": "turn into JSON data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if already published": {
+      "main": [
+        [
+          {
+            "node": "Check if published ( yes -> already published)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if published ( yes -> already published)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check if it is the first one(first-> true)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last tweet": {
+      "main": [
+        [
+          {
+            "node": "Create Tweet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission1": {
+      "main": [
+        [
+          {
+            "node": "Search records1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission2": {
+      "main": [
+        [
+          {
+            "node": "Search records2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Generate the X posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Check if already published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten for airtable1": {
+      "main": [
+        [
+          {
+            "node": "Create a record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "turn into JSON data1": {
+      "main": [
+        [
+          {
+            "node": "Flatten for airtable1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records2": {
+      "main": [
+        [
+          {
+            "node": "check if already stored",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the first time posts": {
+      "main": [
+        [
+          {
+            "node": "Store x_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store x_id": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store X_id": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing2": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a89b208d-7019-4b0c-b2a0-31671f238114",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ddb72466da58bafe1cb2e20fc8fb1ee258d39defdefc9651994e60ec58947f46"
+  },
+  "id": "cP1qjcmKdAPQoQbV",
+  "tags": []
+}
