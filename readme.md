@@ -1,15 +1,11 @@
 # 🚀 Academic Paper to Twitter Threads n8n Workflow
 
+![Workflow Overview](./images/workflow-overview.png)
+*A high-level look at the complete workflow, from PDF to published thread.*
+
 Tired of seeing great research get lost in the digital void? This workflow is your personal AI assistant for turning dense academic PDFs into viral Twitter (X) threads!
 
 It intelligently analyzes any paper from a URL, drafts an entire, engaging thread, and stages it in Airtable for your review. Once you're happy, a second trigger publishes the thread for you, tweet by tweet. It's designed to be resilient—if it gets interrupted, you can pick up right where you left off without any duplicate posts.
-
-## ✨ Why Use This Workflow?
-
--   **Save Hours of Work**: Stop manually summarizing papers and crafting tweets. Let AI do the heavy lifting.
--   **Boost Your Reach**: Translate complex ideas into accessible content that a wider audience can understand and share.
--   **Maintain Full Control**: Generate content in batches, review and edit everything in Airtable, and publish only when you're ready.
--   **Publish with Confidence**: The built-in checks prevent duplicate posts, even if your workflow is interrupted.
 
 ## 🧠 Core Features
 
@@ -18,6 +14,14 @@ It intelligently analyzes any paper from a URL, drafts an entire, engaging threa
 -   🗄️ **Content Hub & Cache**: Uses Airtable as a central database to store, review, and manage all generated tweets before and after publishing.
 -   🛡️ **Idempotent Publishing**: The workflow smartly checks if a tweet has already been posted, preventing duplicates and allowing you to safely re-run the publishing job.
 -   🧑‍💻 **Human-in-the-Loop Design**: Content generation and publishing are separated, giving you full control to review, edit, and approve content before it goes live.
+ 
+## 📚 Table of Contents
+
+1.  [How It Works](#-how-it-works)
+2.  [Getting Started](#-getting-started-in-3-steps)
+3.  [Usage Guide](#-how-to-use-it)
+4.  [Under the Hood: A Technical Deep Dive](#-a-deep-dive-into-the-code-nodes)
+5.  [Troubleshooting](#troubleshooting)
 
 ## ⚙️ How It Works
 
@@ -26,11 +30,13 @@ The workflow is split into two powerful phases:
 ### Phase 1: 📝 Content Generation & Storage
 
 ![Content Generation Flow](./images/phase-1-generation.png)
+
 *The generation phase: A PDF URL is processed by AI, and the resulting tweets are stored in Airtable.*
 
 1.  **Trigger (PDF URL)**: The workflow starts when a form is submitted with a URL to a PDF document.
 2.  **Check for Duplicates**: It first queries Airtable to see if this document has been processed before. If so, it stops this branch of the workflow.
 3.  **AI Analysis**: If it's a new document, the PDF URL is sent to a Google Gemini node. A detailed prompt instructs the AI to act as a research expert and extract the paper's title, main arguments, supporting points, and interesting highlights.
+![Thread Example](./images/phase-1-threads.png)
 4.  **AI Copywriting**: The structured analysis from the first step is then passed to a second Gemini node, which acts as an expert social media copywriter. This node drafts the Twitter thread based on strict formatting rules (e.g., character limits, tone, hook-driven first tweet).
 5.  **Data Structuring**: The AI's JSON output is parsed and then flattened into individual items, where each item represents a single tweet.
 6.  **Store in Airtable**: Each tweet is saved as a new row in an Airtable table, containing its text, position in the thread, and other metadata. At this point, no tweets have been published.
@@ -42,10 +48,12 @@ The workflow is split into two powerful phases:
 
 1.  **Trigger (Document Title)**: This phase is initiated by submitting a form with the document's title.
 2.  **Fetch Tweets**: The workflow retrieves all tweet records for that title from Airtable, sorted by their position.
+![Thread Example](./images/phase-2-threads.png)
+*
 3.  **Loop & Publish**: The workflow iterates through each tweet record one by one.
 4.  **Check if Published**: For each tweet, it checks if an `x_id` (the ID of the post on X) already exists in its Airtable row. If it does, it skips to the next tweet.
 5.  **Post Tweet**:
-    -   If it's the first tweet in the thread (`tweet_pos` = 1), it's posted as a new status.
+    -   If it's the first tweet in the thread (`tweet_pos` = 1), it's posted as a new status update.
     -   If it's a subsequent tweet, it's posted as a reply to the previously posted tweet.
 6.  **Update Airtable**: After a tweet is successfully posted, the workflow updates the corresponding Airtable row with the new `x_id`.
 7.  **Wait**: A 10-minute wait is included between posts to respect API rate limits and ensure the thread posts correctly.
@@ -53,17 +61,36 @@ The workflow is split into two powerful phases:
 ## 🛠️ What You'll Need
 
 Before you can use this workflow, you will need:
-
 -   ✅ An active **n8n** instance (Cloud or self-hosted).
 -   ✅ **Google Gemini API Key**.
 -   ✅ **Twitter (X) API v2 Credentials** with write permissions.
 -   ✅ **Airtable Account** and a **Personal Access Token**.
 
-## 🚀 Get Started in 3 Steps
 
-### 1. Set Up Your Airtable Base
+### 🔍 Model Evaluation and Selection
 
-You need to create an Airtable base to store the tweet data.
+To ensure automated content generation was accurate and robust, I evaluated several top LLMs. The main criteria were: strict schema compliance, minimal post-processing, and reliable output.
+
+![Claude vs GPT](<images_llm/claude vs gpt.png>)
+
+- **Claude (Sonnet/Haiku):** Produced fluent, natural text but often mixed commentary with JSON, leading to parsing failures.
+- **GPT-4 / GPT-4.1-mini:** Handled structured prompts well, but frequently added explanations or extra text, requiring manual cleanup.
+![Gemini vs Claude](<images_llm/gemini vs claude.png>)
+- **Qwen / Mistral:** Fast and lightweight, but sometimes hallucinated metadata or deviated from the required schema.
+- **Gemini 2.5 Flash:** Consistently delivered valid JSON, concise tweets, and accurate mapping of arguments to posts. It struck the best balance between factual accuracy, brevity, and reliability.
+![Qwen vs Mistral](<images_llm/qwen vs mistral.png>)
+
+**Why Gemini 2.5 Flash?**
+
+Gemini 2.5 Flash stood out for its dependable structured output and high-quality communication. Its reliability reduced post-processing, making the workflow efficient and resilient.
+
+
+## 🚀 Getting Started
+
+Follow these steps to get the workflow up and running.
+
+### Step 1: Set Up Your Airtable Base
+This base will act as your content database.
 
 1.  Create a new Base in Airtable (e.g., "AI Content").
 2.  Create a table within that base (e.g., "Twitter Threads").
@@ -82,7 +109,7 @@ You need to create an Airtable base to store the tweet data.
 !Airtable Base Setup
 *The required fields and their types in your Airtable table.*
 
-### 2. Import & Configure in n8n
+### Step 2: Import & Configure the n8n Workflow
 
 1.  **Import Workflow**: In your n8n canvas, select **Import from File** and upload the `academic paper to twitter threads.json` file.
 2.  **Configure Credentials**:
@@ -92,9 +119,9 @@ You need to create an Airtable base to store the tweet data.
 3.  **Activate the Workflow**: Save and activate the workflow.
 4.  **You're ready to go!**
 
-## 🎬 How to Use It
+## 🎬 Usage Guide
 
-### Step 1: Generate Tweet Content ✍️
+### Generate Tweet Content ✍️
 
 1.  With the workflow active, find the **"On form submission2"** trigger node.
 2.  Open its **Test URL**.
@@ -105,7 +132,7 @@ You need to create an Airtable base to store the tweet data.
 
 4.  The workflow will run the generation phase. You can check your Airtable base to see the newly created rows for each tweet.
 
-### Step 2: Review & Publish Your Thread 🚀
+### Review & Publish Your Thread 🚀
 
 1.  Once you have reviewed the content in Airtable and are ready to post, find the **"On form submission1"** trigger node.
 2.  Open its **Test URL**.
@@ -116,7 +143,7 @@ You need to create an Airtable base to store the tweet data.
 
 4.  The workflow will begin publishing the tweets one by one, updating each row with the corresponding `x_id` after it's posted.
 
-## 🧑‍💻 A Deep Dive into the Code Nodes
+## 🧑‍💻 Under the Hood: A Technical Deep Dive
 
 For those who love to tinker, here's a look under the hood at the custom JavaScript that powers this workflow's data handling.
 
