@@ -3,18 +3,27 @@
 ![Workflow Overview](./images/workflow-overview.png)
 *A high-level look at the complete workflow, from PDF to published thread.*
 
-Tired of seeing great research get lost in the digital void? This workflow is your personal AI assistant for turning dense academic PDFs into viral Twitter (X) threads!
+When I tried to find an n8n workflow that turns academic papers into Twitter threads, I couldn't find the right solution. Other n8n workflows only focus on creating a single, generic post. However, what I wanted was a **thread**: a series of X posts with each subsequent one replying to the previous one.
 
-It intelligently analyzes any paper from a URL, drafts an entire, engaging thread, and stages it in Airtable for your review. Once you're happy, a second trigger publishes the thread for you, tweet by tweet. It's designed to be resilient—if it gets interrupted, you can pick up right where you left off without any duplicate posts.
+So, I built this.
+
+This workflow uses a two-agent AI system to create high-quality content.
+
+1.  **The Research Agent**: Its only job is to read and process the paper, extracting key arguments and data into a structured format.
+2.  **The Copywriting Agent**: It takes the structured output from the researcher and focuses purely on crafting an engaging, clear, and hook-driven Twitter thread.
+
+This separation is better than a single-step process because it allows each AI agent to excel at its specific task. The researcher focuses on factual accuracy without being distracted by creative writing, while the copywriter can focus on engagement without needing to re-read the source material. This leads to content that is both more accurate and more compelling.
 
 ## 🧠 Core Features
 
 -   🤖 **AI-Powered Analysis**: Leverages Google Gemini to read and deeply understand a PDF, extracting key arguments, data, and highlights.
 -   ✍️ **Expert-Level Copywriting**: A second AI step, acting as a social media pro, transforms the analysis into a polished, hook-driven Twitter thread.
 -   🗄️ **Content Hub & Cache**: Uses Airtable as a central database to store, review, and manage all generated tweets before and after publishing.
--   🛡️ **Idempotent Publishing**: The workflow smartly checks if a tweet has already been posted, preventing duplicates and allowing you to safely re-run the publishing job.
+-   🛡️ **Fault-Tolerant Publishing**: The workflow is designed to be resilient. If publishing stops in the middle (e.g., due to an API rate limit), you can fix the issue and restart the job without creating duplicate posts. It picks up right where it left off.
 -   🧑‍💻 **Human-in-the-Loop Design**: Content generation and publishing are separated, giving you full control to review, edit, and approve content before it goes live.
  
+![Final Result: a 12 posts thread with each post reply to the previous post](images/results.png)
+
 ## 📚 Table of Contents
 
 1.  [How It Works](#-how-it-works)
@@ -56,7 +65,7 @@ The workflow is split into two powerful phases:
     -   If it's the first tweet in the thread (`tweet_pos` = 1), it's posted as a new status update.
     -   If it's a subsequent tweet, it's posted as a reply to the previously posted tweet.
 6.  **Update Airtable**: After a tweet is successfully posted, the workflow updates the corresponding Airtable row with the new `x_id`.
-7.  **Wait**: A 10-minute wait is included between posts to respect API rate limits and ensure the thread posts correctly.
+7.  **Wait & Rate Limit Prevention**: To prevent hitting API rate limits, the workflow automatically waits for 10 minutes after each post before continuing to the next one. This makes the publishing process more robust.
 
 ## 🛠️ What You'll Need
 
